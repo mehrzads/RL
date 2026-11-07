@@ -36,6 +36,8 @@ MPS (the Mac GPU) crashes with this PyTorch build, so everything runs on CPU.
 
 ## Results (seed 0, start = SFT model, sampled score ≈ 4.4)
 
+Reward for REINFORCE / RLOO / GRPO: apples eaten, minus 1 if the game ends on a format error (a non-move token).
+
 | recipe | final score | detector |
 |---|---|---|
 | reinforce | 9.2 | healthy |
@@ -56,9 +58,10 @@ Expert it imitated: 7.0. REINFORCE, RLOO and GRPO beat their teacher; PPO-RLHF (
 
 ## Failure gallery, in one line each
 
-- *No KL + 30× LR + no clipping*: collapses in 3 iterations (entropy → 0, KL blow-up, every game hits the wall).
+- *No KL + 30× LR + clipping loosened to 10 + 4 epochs*: collapses in 3 iterations (entropy → 0, KL blow-up, every game hits the wall).
 - *Reward-model over-optimisation* (`charts/rlhf_overoptimisation.png`): RM score 1.5 → 12 while the true score falls;
-  the policy exploits the RM's length bias. With KL β = 0.2 it stays honest.
+  the policy exploits the RM's length bias. That run also used 3× the LR and 4 epochs, so KL is not the only
+  difference from the healthy run (β = 0.2, LR 1e-4, 2 epochs).
 - *Length reward*: the verbosity analogue; eat just enough not to starve, then run out the clock.
 - *Sparse reward*: score ≥ 10 works (SFT passes 3% of the time); score ≥ 20 is never reached, so GRPO does nothing.
 - *No SFT*: GRPO from random weights learns the format but never the game.

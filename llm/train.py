@@ -40,7 +40,7 @@ RECIPES = {
                 story="DPO: no rollouts, no reward model: learn directly from best-vs-worst game pairs."),
     # bad
     "bad_grpo_no_kl_high_lr": dict(kind="bad", algo="grpo", kl=0.0, epochs=4, lr=3e-3, clip=10.0,
-                                   story="GRPO with no KL, 30x LR, no clipping: the policy collapses.",
+                                   story="GRPO with no KL, 30x LR, clipping loosened to 10, 4 epochs: the policy collapses.",
                                    symptom="entropy -> 0 and KL explodes within a few iterations"),
     "bad_grpo_sparse": dict(kind="bad", algo="grpo", kl=0.04, epochs=2, reward="score>=20",
                             story="GRPO with an unreachable pass/fail reward (score >= 20): no group ever has any signal.",
@@ -49,7 +49,7 @@ RECIPES = {
                                    story="GRPO rewarded for game length (think 'longer answer = better'): stalls.",
                                    symptom="length and reward up, score down, loop ratio and starvation up"),
     "bad_rlhf_no_kl": dict(kind="bad", algo="ppo", reward="rm", kl=0.0, epochs=4, lr=3e-4, iters=50, max_tokens=2048,
-                           story="PPO-RLHF with no KL leash and a hot LR: the policy over-optimises the reward model.",
+                           story="PPO-RLHF with no KL leash, 3x LR and 4 epochs: the policy over-optimises the reward model.",
                            symptom="reward-model score keeps rising while the true score falls"),
     "bad_dpo_noisy_pairs": dict(kind="bad", algo="dpo", beta=0.1, dpo_epochs=1, lr=1e-4, pairs="ckpt/prefs.pt",
                                 story="DPO on noisy pairs (2 random games, 26% ties, 10% flipped labels): nothing to learn.",
@@ -83,7 +83,11 @@ def k3(logp, ref_logp):
 
 
 def policy_gradient_step(policy, ref, opt, eps, adv_per_ep, cfg):
-    """Shared by REINFORCE / RLOO / GRPO: token-level clipped surrogate + optional k3 KL to reference."""
+    """Shared by REINFORCE / RLOO / GRPO: token-level clipped surrogate + optional k3 KL to reference.
+
+    One call = one batch of games, but several optimizer steps: up to max_tokens moves, shuffled,
+    one step per minibatch of 1,024 moves (times `epochs`).
+    """
     obs, acts = flatten(eps)
     adv = torch.as_tensor(np.concatenate([np.full(len(e["acts"]), a, np.float32) for e, a in zip(eps, adv_per_ep)]))
     old = torch.as_tensor(np.concatenate([e["logp"] for e in eps]), dtype=torch.float32)
@@ -99,7 +103,8 @@ def policy_gradient_step(policy, ref, opt, eps, adv_per_ep, cfg):
             a = adv[mb]
             if cfg["algo"] == "grpo":
                 pg = -torch.min(ratio * a, ratio.clamp(1 - cfg["clip"], 1 + cfg["clip"]) * a)
-            else:  # vanilla on-policy gradient (ratio == 1 on the single epoch)
+            else:  # plain policy gradient: grad of ratio * a equals grad of log pi * a at ratio 1. The ratio is
+                # exactly 1 only on the first minibatch; later minibatches see a slightly updated policy.
                 pg = -ratio * a
             kl = k3(logp, ref_logp)
             loss = (pg + cfg["kl"] * kl).mean()

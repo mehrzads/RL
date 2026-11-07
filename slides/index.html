@@ -513,15 +513,15 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
   <section class="slide" data-slide="batch">
     <div class="hd">
       <div class="h-eyebrow">Method 1 · REINFORCE · the batch</div>
-      <h2 class="h-title">Play <i>many</i> games, then take one step</h2>
+      <h2 class="h-title">Play <i>many</i> games, then <i>update</i></h2>
     </div>
     <svg class="full" id="svg-batch" viewBox="0 0 1600 900" aria-label="Two top-down views of the loss valley. Left: updating after every single game, the path zigzags because each step follows one lucky or unlucky game. Right: updating after a batch of 64 games, the path heads much more directly to the bottom."></svg>
     <div class="colr">
-      <p data-step="1"><b>A batch</b> is every game played before one update. Ours: <b>64 games</b>, 8 boards × 8 games each.</p>
+      <p data-step="1"><b>A batch</b> is every game played before we update the model. Ours: <b>64 games</b>, 8 boards × 8 games each.</p>
       <p data-step="2"><b>Why not update after every game?</b> One game's score is partly luck: where the apples appeared, one unlucky roll of the dice. Averaging the push over 64 games cancels much of that luck, so each step points more reliably downhill.</p>
-      <p data-step="3"><b>Inside the batch,</b> the moves from all its games are shuffled and fed in a few chunks, called <b>minibatches</b>. Each chunk is one downhill step.</p>
+      <p data-step="3"><b>Inside the batch,</b> the moves from all its games are shuffled and fed in a few chunks, called <b>minibatches</b>. Each chunk is one downhill step, so one batch gives a few steps.</p>
     </div>
-    <div class="outcome" data-step="4"><span class="k">The batch also sets "expected"</span>REINFORCE compares each game with the <b>average of its batch</b>. Bigger batches give steadier steps, but more games to play before each one.</div>
+    <div class="outcome" data-step="4"><span class="k">The batch also sets "expected"</span>REINFORCE compares each game with the <b>average of its batch</b>. Bigger batches give steadier steps, but more games to play before each update.</div>
     <div class="credit">Our RL runs: chunks of 1,024 moves · SFT: 256</div>
   </section>
 
@@ -562,13 +562,13 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
     </div>
     <svg class="full" id="svg-reinforce" viewBox="0 0 1600 900" aria-label="Sixteen games from two similar starts, with one baseline, the batch mean, drawn across all of them. Each start has games above and below it: those above get pushed up, those below get pushed down."></svg>
     <div class="colr">
-      <div class="eq">A = R − mean( all games in the batch )<small>R = apples eaten in this game · baseline = the average over the whole batch</small></div>
+      <div class="eq">A = R − mean( all games in the batch )<small>R = apples eaten in this game, −1 if it ends in a format error · baseline = the average over the whole batch</small></div>
       <p data-step="2"><b>Above the line:</b> A &gt; 0, so every move in that game gets more likely. <b>Below:</b> less likely.</p>
       <div class="recipe" data-step="3"><span class="k">One training step</span><ol>
         <li>Play 64 games: 8 boards, 8 games each.</li>
-        <li>Score each game: R = apples eaten.</li>
+        <li>Score each game: R = apples eaten (−1 for a format error).</li>
         <li>A = R − the average of all 64 games.</li>
-        <li>Every move in a game gets that game's A. Update the model.</li></ol></div>
+        <li>Every move in a game gets that game's A. Update the model, one minibatch of moves at a time.</li></ol></div>
     </div>
     <div class="credit">Williams, "Simple statistical gradient-following algorithms", 1992</div>
   </section>
@@ -646,7 +646,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
     </div>
     <div class="cards two">
       <div class="card" data-step="1"><span class="ck">No leash</span><b>It can wander far from SFT</b><p>Every update shifts its move probabilities a little. Over many updates they can end up far from the SFT model's: that's <b>drift</b>. Say on one board SFT picked R 55% of the time, and now 88%. Some drift is how it improves; too much, and it forgets what worked, with nothing pulling it back.</p></div>
-      <div class="card" data-step="2"><span class="ck">No speed limit</span><b>One update can be huge</b><p>If one batch looks very good, the update follows it all the way. With no brakes and a learning rate 30× higher, one of our runs collapsed within <b>3 iterations</b>. We'll see it soon.</p></div>
+      <div class="card" data-step="2"><span class="ck">No speed limit</span><b>One update can be huge</b><p>If one batch looks very good, the update follows it all the way. With no leash, much looser brakes and a learning rate 30× higher, one of our runs collapsed within <b>3 iterations</b>. We'll see it soon.</p></div>
     </div>
     <div class="outcome wide" data-step="3"><span class="k">The fix, next</span><b>GRPO:</b> a leash to the SFT model, and small steps. First we need a way to <b>measure</b> how far the model has moved.</div>
   </section>
@@ -684,7 +684,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
       <h2 class="h-title">Don't drift too far. Don't step too <i>fast</i>.</h2>
     </div>
     <svg class="full" id="svg-belts" viewBox="0 0 1600 900" aria-label="Left: bars for the SFT model and the RL model over the moves U, R, D, L; KL measures how different they are, here 0.26. Right: with clipping, the update for a good move grows with the probability ratio only up to 1.2, then goes flat."></svg>
-    <div class="outcome wide" data-step="3"><span class="k">Why both</span><b>KL</b> discourages going far in total. <b>Clipping</b> discourages going far in one update. GRPO and PPO use both. Right after GRPO's results, we turn them off.</div>
+    <div class="outcome wide" data-step="3"><span class="k">Why both</span><b>KL</b> discourages going far in total. <b>Clipping</b> discourages going far in one update. GRPO and PPO use both. Right after GRPO's results, we remove the leash and loosen the brakes.</div>
     <div class="credit">rlhfbook.com ch. 15 (KL) and ch. 6 (PPO's trust region) · bar values are an illustration</div>
   </section>
 
@@ -723,7 +723,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
   <!-- Slide 28: failure, no KL + high LR -->
   <section class="slide" data-slide="f-collapse">
     <div class="hd">
-      <div class="h-eyebrow">Method 3 · GRPO · failure · no KL, learning rate × 30, no clipping</div>
+      <div class="h-eyebrow">Method 3 · GRPO · failure · no KL, learning rate × 30, clipping loosened, 4 epochs</div>
       <h2 class="h-title">Collapse in <i>three</i> iterations</h2>
     </div>
     <div class="clip" data-step="1"><img src="clips/bad_grpo_no_kl_high_lr_100.gif" alt="Replay: the snake drives straight into the wall"><span>replay · end of training</span></div>
@@ -804,7 +804,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
       <h2 class="h-title">DPO improves using a fixed set of SFT <i>comparisons</i></h2>
     </div>
     <div class="clip zoom" data-step="3" data-on="4" style="left:39cqw;top:17.5cqw;width:12cqw"><img src="clips/dpo.gif" alt="Replay: the DPO model eats 4 apples, then bites itself"><span>replay · DPO, typical game</span></div>
-    <svg class="full" id="svg-dpo-res" viewBox="0 0 1600 900" aria-label="DPO loss falls from 0.69 to about 0.66. The score of sampled games rises from 4.4 to 6.6, peaking at 7.9; each point is only 32 games, so it is noisy."></svg>
+    <svg class="full" id="svg-dpo-res" viewBox="0 0 1600 900" aria-label="DPO loss falls from 0.69 to about 0.66. The score of sampled games rises from 4.4 to 6.6, peaking at 7.9; each point is only 64 games, so it is noisy."></svg>
     <div class="colr">
       <p data-step="2"><b>Training:</b> 2 passes over about 1,470 best-versus-worst pairs. No games played.</p>
       <p data-step="3"><b>At the end:</b> <b>6.6</b> per game, up from 4.4 (peak 7.9). Rejected games became less likely (−0.10 per move); chosen games stayed about the same (−0.01).</p>
@@ -977,13 +977,13 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
   <!-- Slide 45: failure, RM over-optimisation -->
   <section class="slide" data-slide="f-rm">
     <div class="hd">
-      <div class="h-eyebrow">Reward hacking · PPO-RLHF without the KL penalty</div>
+      <div class="h-eyebrow">Reward hacking · PPO-RLHF without the KL penalty, 3× learning rate, 4 epochs</div>
       <h2 class="h-title">The reward goes up. The score goes <i>down</i>.</h2>
     </div>
     <div class="clip" data-step="1"><img src="clips/bad_rlhf_no_kl_100.gif" alt="Replay: the snake circles without eating until it starves or time runs out"><span>replay · end of training</span></div>
-    <svg class="full" id="svg-rm-hack" viewBox="0 0 1600 900" aria-label="Two charts. Reward model score: without KL it climbs from 1.5 to 11.3; with KL it stays near 2.6. True score: without KL it peaks at 8.6 and falls to 2.2; with KL it ends at 7.0."></svg>
+    <svg class="full" id="svg-rm-hack" viewBox="0 0 1600 900" aria-label="Two charts. Reward model score: in the run without KL and with a hotter learning rate it climbs from 1.5 to 11.3; in the healthy run it stays near 2.6. True score: the first peaks at 8.6 and falls to 2.2; the healthy run ends at 7.0."></svg>
     <div class="detect" data-step="3"><span class="k">Detector</span><div class="flags"><span class="flag">reward hacking</span><span class="flag">KL blow-up</span><span class="flag">stalling</span></div>
-      <span></span><p>Remember the reward model liked <b>long games</b>? The policy found it. It loops until the clock runs out. <b>Goodhart's law</b>, and the reason RLHF has a KL term.</p></div>
+      <span></span><p>Remember the reward model liked <b>long games</b>? The policy found it. It loops until the clock runs out: <b>Goodhart's law</b>. This run also had a 3× learning rate and twice the epochs, so removing KL isn't the only change.</p></div>
   </section>
 
   <!-- Slide 46: failure, length reward -->
@@ -1018,7 +1018,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
     <div class="clip" data-step="1"><img src="clips/bad_no_sft_100.gif" alt="Replay: the snake reverses into its own neck on the first move"><span>replay · end of training</span></div>
     <svg class="full" id="svg-nosft" viewBox="0 0 1600 900" aria-label="Without SFT, format errors fall from 97 percent to 5 percent, but the score stays at 0 for all 80 iterations; GRPO from SFT reaches 9.4."></svg>
     <div class="detect" data-step="3"><span class="k">Detector</span><div class="flags"><span class="flag">no improvement</span><span class="flag">KL 6.2</span></div>
-      <span></span><p>Answering with a valid move beats a format error, so it learns that. But its favourite move is <b>reverse</b>: instant death. It never reaches an apple, so there's no reward to climb. <b>Here, RL needed SFT to get started.</b></p></div>
+      <span></span><p>A format error costs −1, so a valid move scores better: it learns that. But its favourite move is <b>reverse</b>: instant death. It never reaches an apple, so there's no reward to climb. <b>Here, RL needed SFT to get started.</b></p></div>
   </section>
 
   <!-- Slide 49: results -->
@@ -1077,7 +1077,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
     <ol class="steps solo">
       <li data-step="1"><span><b>Here, RL needed a useful starting policy.</b><span class="sub">No SFT, no game. An unreachable reward, no reward signal.</span></span></li>
       <li data-step="2"><span><b>The optimiser will find your reward's blind spot.</b><span class="sub">A reward model that likes length gets length. Plot the true metric.</span></span></li>
-      <li data-step="3"><span><b>The KL term is the seatbelt.</b><span class="sub">Same setup with and without it: one reached the teacher, the other learned to circle.</span></span></li>
+      <li data-step="3"><span><b>Keep the seatbelts on.</b><span class="sub">PPO-RLHF without KL, and with a hotter learning rate, learned to circle. The healthy run reached the teacher.</span></span></li>
     </ol>
     <div class="outcome" data-step="4"><span class="k">Honest note</span>One seed per recipe, on a toy problem. The <b>failure patterns</b> are the part that transfers; the exact numbers are not.</div>
   </section>
@@ -1196,7 +1196,7 @@ resultScore("svg-grpo-res", DATA.grpo, { final: 9.4, s2: DATA.grpo.kl, ghost2: D
 (() => {
   // DPO: loss over steps, score at 8 checkpoints
   const svg = S("svg-dpo-res"), d = DATA.dpo, ev = d.evals;
-  const c1 = chart(svg, { x: 140, y: 280, w: 430, h: 190, x0: 0, x1: 184, y0: 0, y1: 12, yt: [0, 4, 8, 12], title: "apples per game (32 games per check)", step: 1 });
+  const c1 = chart(svg, { x: 140, y: 280, w: 430, h: 190, x0: 0, x1: 184, y0: 0, y1: 12, yt: [0, 4, 8, 12], title: "apples per game (64 games per check)", step: 1 });
   c1.ref(7.02, "teacher 7.0");
   c1.line(ev.map(e => e[1]), "good", 1, ev.map(e => e[0]));
   ev.forEach(e => el("circle", { cx: c1.X(e[0]), cy: c1.Y(e[1]), r: 6, class: "dot good", "data-step": 1 }, c1.g));
@@ -1612,8 +1612,8 @@ resultScore("svg-grpo-res", DATA.grpo, { final: 9.4, s2: DATA.grpo.kl, ghost2: D
     pts.forEach(([a, b], k) => el("circle", { cx: a, cy: b, r: k ? 5 : 8, fill: noise > 40 ? "var(--redpen)" : "var(--cobalt)" }, g));
     T(g, cx, 660, sub, "note", { "text-anchor": "middle" });
   };
-  panel(1, 250, "1 game per step", "each step follows one game's luck", 120, 9);
-  panel(2, 610, "64 games per step", "the luck mostly averages out", 22, 9);
+  panel(1, 250, "update after every game", "each step follows one game's luck", 120, 9);
+  panel(2, 610, "update after 64 games", "the luck mostly averages out", 22, 9);
 })();
 
 /* ---------- Slide 16: sampling ---------- */
@@ -1974,9 +1974,9 @@ const endLabel = (c, x, y, text, cls, step) => c.tag(x, y, text, "sl" + (cls ? "
     { x1: 50, y0: 0, y1: 12, yt: [0, 4, 8, 12], xt: [0, 25, 50], xl: "iteration", title: "what the reward model says", step: 1 },
     { x1: 50, y0: 0, y1: 10, yt: [0, 5, 10], xt: [0, 25, 50], xl: "iteration", title: "true score", step: 2 });
   c1.line(good.rm_score, "good", 1); c1.line(bad.rm_score, "bad", 1);
-  endLabel(c1, 50, good.rm_score.at(-1), "β = 0.2", "", 1); endLabel(c1, 50, bad.rm_score.at(-1), "β = 0", "", 1);
+  endLabel(c1, 50, good.rm_score.at(-1), "healthy", "", 1); endLabel(c1, 50, bad.rm_score.at(-1), "no KL, hot", "", 1);
   c2.line(good.score, "good", 2); c2.line(bad.score, "bad", 2);
-  endLabel(c2, 50, good.score.at(-1), "β = 0.2", "", 2); endLabel(c2, 50, bad.score.at(-1), "β = 0", "", 2);
+  endLabel(c2, 50, good.score.at(-1), "healthy", "", 2); endLabel(c2, 50, bad.score.at(-1), "no KL, hot", "", 2);
   const pk = bad.score.indexOf(Math.max(...bad.score));
   el("circle", { cx: c2.X(pk), cy: c2.Y(bad.score[pk]), r: 7, class: "dot bad", "data-step": 2 }, c2.g);
   c2.tag(pk, bad.score[pk], "peak " + bad.score[pk].toFixed(1), "ptv", 2, { dx: 0, dy: -16, "text-anchor": "middle" });
