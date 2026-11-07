@@ -947,14 +947,15 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
   <section class="slide" data-slide="ppo-res">
     <div class="hd">
       <div class="h-eyebrow">Method 5 · PPO-RLHF · online · results on Snake</div>
-      <h2 class="h-title">Our reward model became the <i>bottleneck</i></h2>
+      <h2 class="h-title">PPO-RLHF reached the <i>teacher's</i> score</h2>
     </div>
     <div class="clip zoom" data-step="4" data-on="5" style="left:39cqw;top:17.5cqw;width:12cqw"><img src="clips/ppo_rlhf.gif" alt="Replay: the PPO-RLHF model eats 8 apples, then bites itself"><span>replay · PPO-RLHF, typical game</span></div>
     <svg class="full" id="svg-ppo-res" viewBox="0 0 1600 900" aria-label="The reward model's score rises from 1.5 to 2.6. The real score rises from 4.9 to 7.0, the teacher's level, while GRPO reached 8.4 at the same point. The critic's explained variance rises from below zero to about 0.45."></svg>
     <div class="colr">
       <p data-step="2"><b>Training:</b> 50 iterations × 64 games. Fewer than GRPO's 80: four networks make each step slow.</p>
-      <p data-step="3"><b>The critic improved:</b> below 0 at first (worse than predicting the average), then about 0.44. Its prediction errors explain less and less of the variation in returns.</p>
+      <p data-step="3"><b>The critic improved:</b> below 0 at first (worse than predicting the average), then about 0.44. Its predictions explain more and more of the variation in returns.</p>
       <p data-step="4"><b>At the end:</b> <b>7.0</b> per game, the teacher's level. GRPO was at 8.4 after the same 50 iterations.</p>
+      <p data-step="4"><b>Why not higher?</b> Not isolated. The reward model agrees with the rater only about 70% of the time and leans toward long games, so it may cap what PPO can learn. One seed and a different setup also play a part.</p>
     </div>
     <div class="outcome" data-step="5"><span class="k">No apples needed</span>During training it never counted an apple, only the reward model's score, and still reached the <b>teacher's level</b>.</div>
   </section>
@@ -1028,7 +1029,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
       <h2 class="h-title">RL on apples beat the teacher. PPO-RLHF <i>tied</i>.</h2>
     </div>
     <svg class="full" id="svg-results" viewBox="0 0 1600 900" aria-label="Score versus training iteration. REINFORCE, RLOO and GRPO reach 9.2 to 9.5; PPO-RLHF reaches 7.0; DPO ends at 6.6. The SFT start is 4.4 and the teacher scores 7.0."></svg>
-    <div class="outcome" data-step="1" style="left:58cqw;right:3cqw;bottom:10cqw;font-size:.98cqw;padding:.8cqw 1.2cqw"><span class="k">Read these numbers with care</span><b>One seed</b> per method: the gap between REINFORCE, RLOO and GRPO is noise. Scores come from the games played <b>during training</b>, not a separate test. Starting points differ (4.4 to 4.9) because each is a different sample of 64 games. PPO-RLHF trained <b>50</b> iterations, the others 80. DPO trained on saved pairs and was checked on 32 games.</div>
+    <div class="outcome" data-step="1" style="left:58cqw;right:3cqw;bottom:10cqw;font-size:.98cqw;padding:.8cqw 1.2cqw"><span class="k">Read these numbers with care</span><b>One seed</b> per method, which does not establish a meaningful difference between REINFORCE, RLOO and GRPO. Scores come from the games played <b>during training</b>, not a separate test. Starting points differ (4.4 to 4.9) because each is a different sample of 64 games. PPO-RLHF trained <b>50</b> iterations, the others 80. DPO trained on saved pairs and was checked on 64 games.</div>
   </section>
 
   <!-- Slide 50: family table -->
@@ -1042,7 +1043,7 @@ What is the capital of France?<span class="sp">&lt;|im_end|&gt;</span>
       <tbody>
         <tr data-step="1"><td>REINFORCE</td><td class="yes">yes</td><td>batch mean</td><td>true score</td><td class="no">no</td><td class="no">none</td></tr>
         <tr data-step="2"><td>RLOO</td><td class="yes">yes</td><td>mean of the other games, same start</td><td>true score</td><td class="no">no</td><td class="no">none</td></tr>
-        <tr data-step="3"><td>GRPO</td><td class="yes">yes</td><td>group mean, this game included (then ÷ group std)</td><td>true score</td><td class="no">no</td><td>KL in the loss + clipping</td></tr>
+        <tr data-step="3"><td>GRPO</td><td class="yes">yes</td><td>group mean, including this game</td><td>true score</td><td class="no">no</td><td>KL in the loss + clipping</td></tr>
         <tr data-step="4"><td>DPO</td><td class="no">no</td><td>the reference model</td><td>preference pairs</td><td class="no">no</td><td>β inside the loss</td></tr>
         <tr data-step="5"><td>PPO-RLHF</td><td class="yes">yes</td><td>learned critic, per move</td><td>reward model</td><td class="yes">yes</td><td>KL in the reward + clipping</td></tr>
       </tbody>
