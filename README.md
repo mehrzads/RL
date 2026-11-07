@@ -9,6 +9,8 @@ Two parts:
 - **[Snake as an LLM](llm/)**: a 156k-parameter transformer plays Snake by reading the board as a token
   prompt, trained with the LLM post-training stack: SFT → REINFORCE / RLOO / GRPO → preferences → DPO →
   reward model → PPO-RLHF, plus a failure gallery (collapse, reward hacking, sparse reward, likelihood displacement).
+- **[Slides](slides/)**: the explainer deck built from these results. Open `slides/index.html` in a browser;
+  → / click to advance, ← to go back, F for fullscreen.
 
 ## Classic RL
 
@@ -54,6 +56,6 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # ffmpeg op
 
 ## What's in the repo
 
-- Code, per-run metrics (`runs/*/metrics.csv`, `llm/runs/*/metrics.csv`) and the charts made from them.
+- Code, the slide deck (`slides/`), per-run metrics (`runs/*/metrics.csv`, `llm/runs/*/metrics.csv`) and the charts made from them.
 - Replay JSONs (`runs/*/replays/`), so `render.py` can make the clips without retraining.
 - Not included (regenerate with the commands above): model checkpoints (`llm/ckpt/`) and GIF/MP4 clips.
